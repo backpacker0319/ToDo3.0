@@ -12,28 +12,44 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
     
-    var itemArray = [Item]()
+    func saveItems() {
+        let encoder = PropertyListEncoder()
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        }catch {
+            print("Error encoding item array, \(error)")
+        }
+        
+        self.tableView.reloadData()
+    }
     
-    let defaults = UserDefaults.standard
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                print("Error decoding item array, \(error)")
+            }
+        }
+    }
+
+    
+    
+    var itemArray = [Item]()
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
+    
+        print(dataFilePath)
         
-        let newItem = Item()
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
-        
-        let newItem2 = Item()
-        newItem.title = "Buy Eggos"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
-        
-         if let items = defaults.array(forKey: "TodoListArray") as? [Item]{
-           itemArray = items
-       }
+
+      loadItems()
         
     }
     //Mark - TableView Datasource Methods
@@ -41,19 +57,19 @@ class ToDoListViewController: UITableViewController {
         return itemArray.count
     }
     
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
-        cell.textLabel?.text = itemArray[indexPath.row].title
+        let item = itemArray[indexPath.row]
         
-        if itemArray[indexPath.row].done == true {
-            cell.accessoryType = .checkmark
-        }else {
-            cell.accessoryType = .none
-        }
-        //All of the above 49-53 can use a ternary cell.accessoryType = item.done ? .checkmark : .none
+        cell.textLabel?.text = item.title
+        
+
+        cell.accessoryType = item.done ? .checkmark : .none
+        
         return cell
     }
     
@@ -63,11 +79,8 @@ class ToDoListViewController: UITableViewController {
         
        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
+        saveItems()
 
-        
-        tableView.reloadData()
-        
-        
         tableView.deselectRow(at: indexPath, animated: true)
     }
     // MARK- Add new Items
@@ -86,12 +99,8 @@ class ToDoListViewController: UITableViewController {
             
             self.itemArray.append(newItem)
            
-            
-            self.defaults.set(self.itemArray, forKey: "TodoListArray")
-            
-            self.tableView.reloadData()
+            self.saveItems()
         }
-        
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create new item"
             textField = alertTextField
@@ -100,5 +109,7 @@ class ToDoListViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-}
+    }
+
+
 
